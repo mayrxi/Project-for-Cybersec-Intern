@@ -1,0 +1,37 @@
+from flask import Flask, jsonify, request
+import boto3
+import threading
+import time
+from botocore.exceptions import NoCredentialsError, PartialCredentialsError
+
+app = Flask(__name__)
+
+def scan_s3_buckets():
+    """Scans S3 bucket permissions."""
+    s3 = boto3.client('s3')
+    try:
+        response = s3.list_buckets()
+        findings = []
+        for bucket in response['Buckets']:
+            bucket_name = bucket['Name']
+            acl = s3.get_bucket_acl(Bucket=bucket_name)
+            for grant in acl['Grants']:
+                if 'AllUsers' in str(grant['Grantee']) or 'AuthenticatedUsers' in str(grant['Grantee']):
+                    findings.append({
+                        "bucket": bucket_name,
+                        "issue": "Publicly accessible bucket",
+                        "risk_level": "High"
+                    })
+        return findings
+    except (NoCredentialsError, PartialCredentialsError):
+        return {"error": "Invalid AWS credentials. Please configure correctly."}
+
+@app.route('/scan', methods=['GET'])
+def scan():
+    """Endpoint to trigger a security scan."""
+    results = {}
+    results['s3_buckets'] = scan_s3_buckets()
+    return jsonify(results)
+
+if __name__ == '__main__':
+    app.run(debug=True, host='0.0.0.0', port=5000)
