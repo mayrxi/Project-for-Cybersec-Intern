@@ -1,0 +1,73 @@
+import { useEffect, useState } from "react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Table, TableHead, TableRow, TableCell, TableBody } from "@/components/ui/table";
+import { Line } from "react-chartjs-2";
+import { Button, Input } from "@/components/ui";
+
+export default function SecurityDashboard() {
+  const [scanResults, setScanResults] = useState([]);
+  const [customRule, setCustomRule] = useState("");
+  const [rules, setRules] = useState([]);
+
+  useEffect(() => {
+    fetch("http://localhost:5000/scan")
+      .then((res) => res.json())
+      .then((data) => setScanResults(data.s3_buckets || []));
+  }, []);
+
+  const addRule = () => {
+    if (customRule) {
+      setRules([...rules, customRule]);
+      setCustomRule("");
+    }
+  };
+
+  return (
+    <div className="p-6">
+      <h1 className="text-xl font-bold mb-4">Cloud Security Dashboard</h1>
+      <Card>
+        <CardContent>
+          <h2 className="text-lg font-semibold mb-2">Security Issues</h2>
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableCell>Bucket Name</TableCell>
+                <TableCell>Issue</TableCell>
+                <TableCell>Risk Level</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {scanResults.map((item, index) => (
+                <TableRow key={index}>
+                  <TableCell>{item.bucket}</TableCell>
+                  <TableCell>{item.issue}</TableCell>
+                  <TableCell className="text-red-500">{item.risk_level}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+
+      <Card className="mt-6">
+        <CardContent>
+          <h2 className="text-lg font-semibold mb-2">Custom Rule Creation</h2>
+          <div className="flex space-x-2">
+            <Input 
+              type="text" 
+              value={customRule} 
+              onChange={(e) => setCustomRule(e.target.value)} 
+              placeholder="Enter custom rule" 
+            />
+            <Button onClick={addRule}>Add Rule</Button>
+          </div>
+          <ul className="mt-4">
+            {rules.map((rule, index) => (
+              <li key={index} className="text-sm text-gray-700">- {rule}</li>
+            ))}
+          </ul>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
